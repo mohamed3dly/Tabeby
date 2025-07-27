@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isVerified: {
+  type: Boolean,
+  default: false,
+  },
   role: {
     type: String,
     enum: ['patient', 'doctor', 'nurse', 'admin'],
@@ -28,6 +32,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['male', 'female'],
     required: true
+  },
+  location: {
+  type: String,
+  default: ''
   },
   birthDate: {
     type: Date
