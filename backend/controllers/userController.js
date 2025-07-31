@@ -9,9 +9,7 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require('otp-generator');
 const sendEmail = require('../utils/sendEmail');
 
-// ===============================
 //  Register
-// ===============================
 
 const registerUser = async (req, res) => {
   const validateRoleData = (role, data) => {
@@ -43,7 +41,6 @@ const registerUser = async (req, res) => {
   if (role === "patient") {
     if (!data.phone) errors.push("رقم الهاتف مطلوب");
     if (!data.location) errors.push("الموقع مطلوب");
-    // أي حاجة تانية للمريض
   }
 
   return errors;
@@ -67,7 +64,6 @@ const registerUser = async (req, res) => {
 
     const file = req.file;
 
-    // تحقق من البيانات الإضافية قبل ما تسجل اليوزر
     const certificate = file
       ? {
           fileUrl: file.path,
@@ -92,7 +88,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // 💡 دلوقتي خلاص متأكدين إن البيانات سليمة، نبدأ نسجل
+    //  دلوقتي خلاص متأكدين إن البيانات سليمة، نبدأ نسجل
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       fullName,
@@ -137,7 +133,7 @@ const registerUser = async (req, res) => {
         location,
       });
     }
-    // وهكذا لباقي الـ roles...
+    // وهكذا لباقي الـ roles
 
     const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, {
       expiresIn: "7d",
@@ -160,7 +156,7 @@ return res.status(201).json({
 });
 
   } catch (err) {
-    console.error("❌ Error in register:", err);
+    console.error(" Error in register:", err);
     res.status(500).json({
       message: "فشل التسجيل",
       error: err.message,
@@ -168,9 +164,7 @@ return res.status(201).json({
   }
 };
 
-// ===============================
 //  Login
-// ===============================
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -205,9 +199,8 @@ if (!user.isVerified) {
   }
 };
 
-// ===============================
 //  Forgot Password - Send OTP
-// ===============================
+
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -255,9 +248,8 @@ const verifyOtp = async (req, res) => {
   res.json({ message: 'تم تأكيد الحساب بنجاح', token });
 };
 
-// ===============================
 //  Reset Password
-// ===============================
+
 const resetPassword = async (req, res) => {
   const { email, newPassword } = req.body;
   const user = await User.findOne({ email });
@@ -271,9 +263,8 @@ const resetPassword = async (req, res) => {
 
   res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
 };
-// ===============================
+
 //  resendOtp
-// ===============================
 
 const resendOtp = async (req, res) => {
   const { email } = req.body;
@@ -312,9 +303,79 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-// ===============================
+const NurseProfile = require('../models/nurseProfile');
+
+const getUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let profile = null;
+
+    if (user.role === "doctor") {
+      profile = await DoctorProfile.findOne({ userId: user._id });
+    } else if (user.role === "patient") {
+      profile = await PatientProfile.findOne({ userId: user._id });
+    } else if (user.role === "nurse") {
+      profile = await NurseProfile.findOne({ userId: user._id });
+    }
+
+    return res.status(200).json({
+      user,
+      profile
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+const updateUser = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // ✅ Update user info
+    const updatedUser = await User.findByIdAndUpdate(userId, req.body.user, {
+      new: true,
+      runValidators: true
+    }).select("-password");
+
+    // ✅ Update profile info
+    let updatedProfile = null;
+    if (req.body.profile) {
+      if (updatedUser.role === "doctor") {
+        updatedProfile = await DoctorProfile.findOneAndUpdate(
+          { userId },
+          req.body.profile,
+          { new: true, runValidators: true }
+        );
+      } else if (updatedUser.role === "patient") {
+        updatedProfile = await PatientProfile.findOneAndUpdate(
+          { userId },
+          req.body.profile,
+          { new: true, runValidators: true }
+        );
+      } else if (updatedUser.role === "nurse") {
+        updatedProfile = await NurseProfile.findOneAndUpdate(
+          { userId },
+          req.body.profile,
+          { new: true, runValidators: true }
+        );
+      }
+    }
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+      profile: updatedProfile
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Update failed", error: error.message });
+  }
+};
+
 //  Exports
-// ===============================
+
 module.exports = {
   registerUser,
   loginUser,
@@ -323,4 +384,6 @@ module.exports = {
   resetPassword,
   resendOtp,
   logoutUser,
+  getUser,
+  updateUser
 };

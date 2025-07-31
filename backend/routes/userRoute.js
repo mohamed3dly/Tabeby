@@ -7,7 +7,9 @@ const {
   verifyOtp,
   resetPassword,
   resendOtp,
-  logoutUser
+  logoutUser,
+  getUser,
+  updateUser
 } = require("../controllers/userController");
 
 const upload = require("../middlewares/multer");
@@ -19,5 +21,8 @@ router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
 router.post("/resend-otp", resendOtp);
 router.post("/logout", logoutUser);
+router.get("/getUser", authMiddleware, getUser);
+router.patch("/updateUser", authMiddleware, updateUser);
+
 
 module.exports = router;
