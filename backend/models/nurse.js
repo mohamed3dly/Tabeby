@@ -10,12 +10,12 @@ const nurseSchema = new mongoose.Schema({
   specialty: {
     type: String,
     enum: [
-      'geriatric nursing',
-      'obstetric nursing',
-      'critical care nursing',
-      'pediatric nursing',
-      'public health nursing',
-      'medical-surgical nursing'
+      'تمريض المسنين',
+      'تمريض النساء والتوليد',
+      'تمريض الحالات الحرجة',
+      'تمريض الأطفال',
+      'تمريض الصحة العامة',
+      'تمريض الباطني والجراحي'
     ],
     required: true
   },
