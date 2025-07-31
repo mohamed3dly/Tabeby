@@ -15,50 +15,62 @@ const nurseSchema = new mongoose.Schema({
       'تمريض الحالات الحرجة',
       'تمريض الأطفال',
       'تمريض الصحة العامة',
-      'تمريض الباطنة والجراحي'
+      'تمريض الباطني والجراحي'
     ],
     required: true
   },
   description: {
     type: String,
     required: true,
-    maxlength: 1000
+    maxlength: 1000,
+    trim: true
   },
   certificate: {
-  fileUrl: {
-    type: String, // رابط الشهادة (صورة أو PDF من Cloudinary أو AWS S3)
-    required: true
+    fileUrl: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return /^https?:\/\/.+/.test(v);
+        },
+        message: 'Invalid file URL'
+      }
+    },
+    fileType: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    rejectionReason: {
+      type: String,
+      trim: true
+    }
   },
-  fileType: {
-    type: String, // 'image/jpeg', 'application/pdf', إلخ
-    required: true
+  isVerified: {
+    type: Boolean,
+    default: false
   },
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
-  },
-  rejectionReason: {
-    type: String // اختياري – لو اترفض يقدر الأدمن يكتب السبب
-  }
- },
- isVerified: {
-   type: Boolean,
-   default: false
- }
- ,
- phone: {
+  phone: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    trim: true,
+    match: [/^\+?[0-9\s\-()]{8,20}$/, 'Invalid phone number']
   },
   price: {
     type: Number,
-    required: true
+    required: true,
+    min: [0, 'Price must be a positive number']
   },
   location: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   schedule: [
     {
@@ -66,7 +78,10 @@ const nurseSchema = new mongoose.Schema({
         type: String,
         enum: ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
       },
-      slots: [String] 
+      slots: {
+        type: [String],
+        default: []
+      }
     }
   ],
   rating: {
@@ -76,11 +91,9 @@ const nurseSchema = new mongoose.Schema({
   totalReviews: {
     type: Number,
     default: 0
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Nurse', nurseSchema);

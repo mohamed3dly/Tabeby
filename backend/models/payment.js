@@ -3,25 +3,28 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
   orderId: {
     type: String,
-    required: true,
-    unique: true
+    required: [true, 'Order ID is required'],
+    unique: true,
+    trim: true
   },
   patientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, 'Patient ID is required']
   },
   appointmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Appointment',
-    required: true
+    required: [true, 'Appointment ID is required']
   },
   amount: {
     type: Number,
-    required: true
+    required: [true, 'Amount is required'],
+    min: [0, 'Amount must be a positive number']
   },
   currency: {
     type: String,
+    enum: ['EGP', 'USD', 'EUR'],
     default: 'EGP'
   },
   paymentMethod: {
@@ -35,17 +38,26 @@ const paymentSchema = new mongoose.Schema({
     default: 'pending'
   },
   paymobTransactionId: {
-    type: String
+    type: String,
+    trim: true
   },
   invoiceUrl: {
-    type: String
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return !v || /^https?:\/\/.+/.test(v);
+      },
+      message: 'Invalid URL format for invoice'
+    }
   },
   paymentDetails: {
-    type: Object,
+    type: mongoose.Schema.Types.Mixed,
     default: {}
   },
   notes: {
-    type: String
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

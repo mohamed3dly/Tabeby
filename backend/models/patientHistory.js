@@ -3,54 +3,74 @@ const mongoose = require("mongoose");
 const historySchema = new mongoose.Schema({
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "patients",
+        ref: "Patient",
         required: [true, "Patient ID is required"],
     },
-    chronicDisease1: {
-        type: String,
-        required: [true, "First chronic disease is required"],
-    },
-    chronicDisease2: {
-        type: String,
-        required: [true, "Second chronic disease is required"],
-    },
-    surgeryName: {
-        type: String,
-        required: [true, "Surgery name is required"],
-    },
-    surgeryDate: {
-        type: Date,
-        required: [true, "Surgery date is required"],
-    },
-    surgeryNotes: {
-        type: String,
-        required: [true, "Surgery notes are required"],
-    },
-    medication1: {
-        type: String,
-        required: [true, "First medication is required"],
-    },
-    
+
+    chronicDiseases: [
+        {
+            type: String,
+            trim: true
+        }
+    ],
+
+    surgeries: [
+        {
+            name: {
+                type: String,
+                trim: true,
+                required: [true, "Surgery name is required"]
+            },
+            date: {
+                type: Date,
+                required: [true, "Surgery date is required"]
+            },
+            notes: {
+                type: String,
+                trim: true,
+                required: [true, "Surgery notes are required"]
+            }
+        }
+    ],
+
+    medications: [
+        {
+            type: String,
+            trim: true
+        }
+    ],
+
     allergy: {
         type: String,
-        required: [true, "Allergy information is required"],
+        trim: true
     },
-    visitDoctorName: {
-        type: String,
-        required: [true, "Visit doctor name is required"],
-    },
-    visitDate: {
-        type: Date,
-        required: [true, "Visit date is required"],
-    },
-    visitDiagnosis: {
-        type: String,
-        required: [true, "Visit diagnosis is required"],
-    },
+
+    visits: [
+        {
+            doctorName: {
+                type: String,
+                trim: true
+            },
+            date: {
+                type: Date
+            },
+            diagnosis: {
+                type: String,
+                trim: true
+            }
+        }
+    ],
+
     testFileUrl: {
         type: String,
-        required: [true, "Test file URL is required"],
-    },
+        trim: true,
+        validate: {
+            validator: function (v) {
+                return !v || /^https?:\/\/.+/.test(v);
+            },
+            message: 'Invalid URL format for test file'
+        }
+    }
 }, {
     timestamps: true,
 });

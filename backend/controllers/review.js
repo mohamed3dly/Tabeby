@@ -3,7 +3,7 @@ const Review = require("../models/review.js");
 const createReview = async (req, res) => {
     try {
         const { rating, comment, doctor, nurse } = req.body;
-        const patient = req.user._id;
+        const patient = req.user.id;
 
         if (!doctor && !nurse)
             return res.status(400).json({ error: "Review must be for a doctor or a nurse." });
