@@ -13,6 +13,8 @@ const {
 } = require("../controllers/userController");
 
 const upload = require("../middlewares/multer");
+const authMiddleware = require("../middlewares/authMiddleware");
+
 
 router.post("/register", upload.single("certificate"), registerUser);
 router.post("/login", loginUser);

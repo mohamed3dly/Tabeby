@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const {protect} = require('../middlewares/authMiddleware');
+const authMiddleware  = require('../middlewares/authMiddleware');
 const {createReview,getAllReviews,getDoctorReviews,getNurseReviews,deleteReview} = require('../controllers/review.js');
 
-router.post('/', protect, createReview);
-router.get('/',protect, getAllReviews);
-router.get('/doctor/:id',protect, getDoctorReviews);
-router.get('/nurse/:id',protect, getNurseReviews);
-router.delete('/:id', protect, deleteReview);
+router.post('/', authMiddleware, createReview);
+router.get('/',authMiddleware, getAllReviews);
+router.get('/doctor/:id',authMiddleware, getDoctorReviews);
+router.get('/nurse/:id',authMiddleware, getNurseReviews);
+router.delete('/:id', authMiddleware, deleteReview);
 module.exports = router;

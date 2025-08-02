@@ -4,6 +4,8 @@ const Nurse = require("../models/nurse");
 const Patient = require("../models/patient");
 const OTP = require("../models/otp");
 const History = require("../models/patientHistory");
+const authMiddleware = require("../middlewares/authMiddleware");
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require('otp-generator');
@@ -303,7 +305,7 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-const NurseProfile = require('../models/nurseProfile');
+// const NurseProfile = require('../models/nurseProfile');
 
 const getUser = async (req, res) => {
   try {
@@ -338,7 +340,10 @@ const updateUser = async (req, res) => {
       new: true,
       runValidators: true
     }).select("-password");
-
+    
+    if (req.body.user?.email || req.body.user?.password) {
+      return res.status(400).json({ message: "You can't update email or password from here." });
+    }
     // ✅ Update profile info
     let updatedProfile = null;
     if (req.body.profile) {

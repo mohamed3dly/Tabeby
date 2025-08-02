@@ -21,24 +21,36 @@ const uploadCertificate = async (req, res) => {
 };
 
 // get all doctors
+
 const getAllDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find().populate("userId", "fullName email");
-    res.status(200).json(doctors);
+    const doctors = await User.find({ role: "doctor" }).select("-password");
+
+    const doctorsWithProfiles = await Promise.all(
+      doctors.map(async (doctor) => {
+        const profile = await DoctorProfile.findOne({ userId: doctor._id });
+        return { user: doctor, profile };
+      })
+    );
+
+    res.status(200).json(doctorsWithProfiles);
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 // get doctors by id
 const getDoctorById = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.params.id).populate("userId", "fullName email");
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+    const doctor = await User.findById(req.params.id).select('-password');
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
 
-    res.status(200).json(doctor);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    const profile = await DoctorProfile.findOne({ userId: doctor._id });
+    res.status(200).json({ user: doctor, profile });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error getting doctor', error: error.message });
   }
 };
 
@@ -59,30 +71,36 @@ const getDoctorById = async (req, res) => {
 // };
 
 // PATCH update doctor by id
-const updateDoctor = async (req, res) => {
+
+const updateDoctorProfile = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.params.id);
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+    const doctorId = req.params.id;
+    const currentUser = req.user;
 
-    // تأكد إن اللي بيعدل هو نفسه الدكتور
-    if (doctor.userId.toString() !== req.user.userId)
-      return res.status(403).json({ message: "Not authorized" });
+    // ❗ Optional: لو عايزة تقيدي التعديل لمستخدم معيّن
+    if (currentUser.role !== "admin" && currentUser.userId !== doctorId) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
 
-    const updated = await Doctor.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
+    const updatedProfile = await DoctorProfile.findOneAndUpdate(
+      { userId: doctorId },
+      req.body,
+      { new: true, runValidators: true }
+    );
 
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ message: "Update failed", error: err.message });
+    if (!updatedProfile) {
+      return res.status(404).json({ message: "Doctor profile not found" });
+    }
+
+    res.status(200).json({ message: "Doctor profile updated", updatedProfile });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 module.exports = {
   uploadCertificate,
   getAllDoctors,
   getDoctorById,
   // addCertificate,
-  updateDoctor
+  updateDoctorProfile
 };
