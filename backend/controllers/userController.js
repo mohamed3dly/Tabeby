@@ -303,7 +303,7 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-const NurseProfile = require('../models/nurseProfile');
+const NurseProfile = require('../models/nurse');
 
 const getUser = async (req, res) => {
   try {
