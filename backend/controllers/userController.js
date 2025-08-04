@@ -9,6 +9,7 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require('otp-generator');
 const sendEmail = require('../utils/sendEmail');
 
+
 //  Register
 
 const registerUser = async (req, res) => {
@@ -303,21 +304,20 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-const NurseProfile = require('../models/nurse');
 
 const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password");
+    const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     let profile = null;
 
     if (user.role === "doctor") {
-      profile = await DoctorProfile.findOne({ userId: user._id });
+      profile = await Doctor.findOne({ userId: user._id });
     } else if (user.role === "patient") {
-      profile = await PatientProfile.findOne({ userId: user._id });
+      profile = await Patient.findOne({ userId: user._id });
     } else if (user.role === "nurse") {
-      profile = await NurseProfile.findOne({ userId: user._id });
+      profile = await Nurse.findOne({ userId: user._id });
     }
 
     return res.status(200).json({
@@ -329,33 +329,34 @@ const getUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
 const updateUser = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
-    // ✅ Update user info
     const updatedUser = await User.findByIdAndUpdate(userId, req.body.user, {
       new: true,
       runValidators: true
     }).select("-password");
 
-    // ✅ Update profile info
     let updatedProfile = null;
+
     if (req.body.profile) {
       if (updatedUser.role === "doctor") {
-        updatedProfile = await DoctorProfile.findOneAndUpdate(
+        updatedProfile = await Doctor.findOneAndUpdate(
           { userId },
           req.body.profile,
           { new: true, runValidators: true }
         );
       } else if (updatedUser.role === "patient") {
-        updatedProfile = await PatientProfile.findOneAndUpdate(
+        updatedProfile = await Patient.findOneAndUpdate(
           { userId },
           req.body.profile,
           { new: true, runValidators: true }
         );
       } else if (updatedUser.role === "nurse") {
-        updatedProfile = await NurseProfile.findOneAndUpdate(
+        updatedProfile = await Nurse.findOneAndUpdate(
           { userId },
           req.body.profile,
           { new: true, runValidators: true }
@@ -374,16 +375,7 @@ const updateUser = async (req, res) => {
   }
 };
 
+
 //  Exports
 
-module.exports = {
-  registerUser,
-  loginUser,
-  forgotPassword,
-  verifyOtp,
-  resetPassword,
-  resendOtp,
-  logoutUser,
-  getUser,
-  updateUser
-};
+module.exports = {registerUser,loginUser,forgotPassword,verifyOtp,resetPassword,resendOtp,logoutUser,getUser,updateUser};

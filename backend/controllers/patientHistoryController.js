@@ -3,22 +3,46 @@ const History = require('../models/patientHistory');
 exports.createMedicalHistory = async (req, res) => {
   try {
     const history = await History.create({
-      patientId: req.body.patientId, // أو من الـ JWT
-      chronicDisease1: req.body.chronicDisease1,
-      chronicDisease2: req.body.chronicDisease2,
-      surgeryName: req.body.surgeryName,
-      surgeryDate: req.body.surgeryDate,
-      surgeryNotes: req.body.surgeryNotes,
-      medication1: req.body.medication1,
+      patientId: req.user.id,
+
+      chronicDiseases: [
+        req.body.chronicDisease1,
+        req.body.chronicDisease2
+      ].filter(Boolean),
+
+      surgeries: [
+        {
+          name: req.body.surgeryName,
+          date: req.body.surgeryDate,
+          notes: req.body.surgeryNotes
+        }
+      ].filter(s => s.name && s.date && s.notes),
+
+      medications: [
+        req.body.medication1
+      ].filter(Boolean),
+
       allergy: req.body.allergy,
-      visitDoctorName: req.body.visitDoctorName,
-      visitDate: req.body.visitDate,
-      visitDiagnosis: req.body.visitDiagnosis,
-      testFileUrl: req.file?.path || req.body.testFileUrl,
+
+      visits: [
+        {
+          doctorName: req.body.visitDoctorName,
+          date: req.body.visitDate,
+          diagnosis: req.body.visitDiagnosis
+        }
+      ].filter(v => v.doctorName && v.date && v.diagnosis),
+
+      testFileUrl: req.file?.path || req.body.testFileUrl
     });
 
-    res.status(201).json({ message: 'تم إنشاء التاريخ الطبي', history });
+    res.status(201).json({
+      message: 'تم إنشاء التاريخ الطبي',
+      history
+    });
   } catch (error) {
-    res.status(500).json({ message: 'فشل في إنشاء التاريخ الطبي', error: error.message });
+    res.status(500).json({
+      message: 'فشل في إنشاء التاريخ الطبي',
+      error: error.message
+    });
   }
 };

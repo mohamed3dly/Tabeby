@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-
 connectDB();
 
 const app = express();
@@ -19,9 +18,6 @@ app.use("/users", userRoutes);
 
 const reviewRoutes = require("./routes/review");
 app.use("/reviews", reviewRoutes);
-
-const bookingRoutes = require("./routes/booking");
-app.use("/bookings", bookingRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
