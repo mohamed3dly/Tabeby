@@ -1,24 +1,38 @@
-const History = require('../models/patientHistory');
+const History = require("../models/History");
 
-exports.createMedicalHistory = async (req, res) => {
+// تحديث التاريخ الطبي عن طريق patientId
+const updateHistoryByPatient = async (req, res) => {
   try {
-    const history = await History.create({
-      patientId: req.body.patientId, // أو من الـ JWT
-      chronicDisease1: req.body.chronicDisease1,
-      chronicDisease2: req.body.chronicDisease2,
-      surgeryName: req.body.surgeryName,
-      surgeryDate: req.body.surgeryDate,
-      surgeryNotes: req.body.surgeryNotes,
-      medication1: req.body.medication1,
-      allergy: req.body.allergy,
-      visitDoctorName: req.body.visitDoctorName,
-      visitDate: req.body.visitDate,
-      visitDiagnosis: req.body.visitDiagnosis,
-      testFileUrl: req.file?.path || req.body.testFileUrl,
-    });
+    const { patientId } = req.params;
 
-    res.status(201).json({ message: 'تم إنشاء التاريخ الطبي', history });
+    const updatedHistory = await History.findOneAndUpdate(
+      { patientId }, // البحث بالتاريخ الخاص بالمريض
+      {
+        $set: {
+          chronicDiseases: req.body.chronicDiseases,
+          surgeries: req.body.surgeries,
+          medications: req.body.medications,
+          allergy: req.body.allergy,
+          visits: req.body.visits,
+          testFileUrl: req.body.testFileUrl
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedHistory) {
+      return res.status(404).json({ message: "لم يتم العثور على التاريخ الطبي لهذا المريض" });
+    }
+
+    res.status(200).json({
+      message: "تم تحديث التاريخ الطبي بنجاح",
+      data: updatedHistory
+    });
   } catch (error) {
-    res.status(500).json({ message: 'فشل في إنشاء التاريخ الطبي', error: error.message });
+    res.status(400).json({ message: error.message });
   }
+};
+
+module.exports = {
+  updateHistoryByPatient
 };

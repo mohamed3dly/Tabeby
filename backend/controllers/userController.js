@@ -11,6 +11,7 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require('otp-generator');
 const sendEmail = require('../utils/sendEmail');
 
+
 //  Register
 
 const registerUser = async (req, res) => {
@@ -134,6 +135,15 @@ const registerUser = async (req, res) => {
         phone,
         location,
       });
+      await History.create({
+       patientId: patient._id,
+       chronicDiseases: req.body.chronicDiseases || [],
+       surgeries: req.body.surgeries || [],
+       medications: req.body.medications || [],
+       allergy: req.body.allergy || "",
+       visits: req.body.visits || [],
+       testFileUrl: req.body.testFileUrl || ""
+      });
     }
     // وهكذا لباقي الـ roles
 
@@ -171,22 +181,29 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password)))
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+    }
 
-if (user.role === "doctor" || user.role === "nurse") {
-  const roleModel = user.role === "doctor" ? require("../models/doctor") : require("../models/nurse");
-  const roleData = await roleModel.findOne({ userId: user._id });
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
+    }
 
-  if (!roleData || roleData.status !== "approved") {
-    return res.status(403).json({
-      message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
-    });
-  }
-}
-if (!user.isVerified) {
-  return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
-}
+    // Check approval for doctor or nurse
+    if (user.role === "doctor" || user.role === "nurse") {
+      const roleModel = user.role === "doctor"
+        ? require("../models/doctor")
+        : require("../models/nurse");
+
+      const roleData = await roleModel.findOne({ userId: user._id });
+
+      if (!roleData || roleData.certificate.status !== "approved") {
+        return res.status(403).json({
+          message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
+        });
+      }
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -200,6 +217,7 @@ if (!user.isVerified) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 //  Forgot Password - Send OTP
 
@@ -305,7 +323,7 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-// const NurseProfile = require('../models/nurseProfile');
+
 
 const getUser = async (req, res) => {
   try {

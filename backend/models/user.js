@@ -20,7 +20,9 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: [ function () {
+    return !this.google?.googleId;  // Required فقط لو مش جاي من Google
+  },, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters'],
     match: [/(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}/, 'Invalid password format']
   },
@@ -53,6 +55,11 @@ const userSchema = new mongoose.Schema({
       message: 'Birthdate must be in the past'
     }
   },
+  google: {
+  googleId: { type: String },
+  accessToken: { type: String },
+  refreshToken: { type: String },
+},
   isActive: {
     type: Boolean,
     default: true
