@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require('../middlewares/authMiddleware'); // ✅ تعديل هنا
+const { protect } = require("../middlewares/authMiddleware");
 
 const {
   registerUser,
@@ -11,7 +11,7 @@ const {
   resendOtp,
   logoutUser,
   getUser,
-  updateUser
+  updateUser,
 } = require("../controllers/userController");
 
 const upload = require("../middlewares/multer");
@@ -25,6 +25,11 @@ router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
 router.post("/resend-otp", resendOtp);
 router.post("/logout", logoutUser);
+<<<<<<< HEAD
 router.get("/getUser", authMiddleware, getUser);       
 router.patch("/updateUser", authMiddleware, updateUser); 
+=======
+router.get("/getUser", protect, getUser);
+router.patch("/updateUser", protect, updateUser);
+>>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
 module.exports = router;
