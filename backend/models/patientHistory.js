@@ -7,6 +7,16 @@ const historySchema = new mongoose.Schema({
         required: [true, "Patient ID is required"],
     },
 
+    phone: {
+        type: String,
+        validate: {
+            validator: function (v) {
+                return !v || /^[+]?[\d\s()-]{5,20}$/.test(v); // أي رقم من 5 لـ 20 رقم/رمز
+            },
+            message: 'Invalid phone number format'
+        }
+    },
+
     chronicDiseases: [
         {
             type: String,
@@ -39,11 +49,6 @@ const historySchema = new mongoose.Schema({
             trim: true
         }
     ],
-
-    allergy: {
-        type: String,
-        trim: true
-    },
 
     visits: [
         {

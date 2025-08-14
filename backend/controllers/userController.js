@@ -4,48 +4,50 @@ const Nurse = require("../models/nurse");
 const Patient = require("../models/patient");
 const OTP = require("../models/otp");
 const History = require("../models/patientHistory");
+const authMiddleware = require("../middlewares/authMiddleware");
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const otpGenerator = require("otp-generator");
-const sendEmail = require("../utils/sendEmail");
+const otpGenerator = require('otp-generator');
+const sendEmail = require('../utils/sendEmail');
 
 
 //  Register
 
 const registerUser = async (req, res) => {
   const validateRoleData = (role, data) => {
-    const errors = [];
+  const errors = [];
 
-    if (role === "doctor") {
-      if (!data.specialty) errors.push("التخصص مطلوب");
-      if (!data.description) errors.push("الوصف مطلوب");
-      if (!data.title) errors.push("اللقب مطلوب");
-      if (!data.price) errors.push("السعر مطلوب");
-      if (!data.location) errors.push("الموقع مطلوب");
-      if (!data.phone) errors.push("رقم الهاتف مطلوب");
-      if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
-        errors.push("شهادة الترخيص مطلوبة");
-      }
+  if (role === "doctor") {
+    if (!data.specialty) errors.push("التخصص مطلوب");
+    if (!data.description) errors.push("الوصف مطلوب");
+    if (!data.title) errors.push("اللقب مطلوب");
+    if (!data.price) errors.push("السعر مطلوب");
+    if (!data.location) errors.push("الموقع مطلوب");
+    if (!data.phone) errors.push("رقم الهاتف مطلوب");
+    if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
+      errors.push("شهادة الترخيص مطلوبة");
     }
+  }
 
-    if (role === "nurse") {
-      if (!data.specialty) errors.push("تخصص التمريض مطلوب");
-      if (!data.description) errors.push("الوصف مطلوب");
-      if (!data.price) errors.push("السعر مطلوب");
-      if (!data.location) errors.push("الموقع مطلوب");
-      if (!data.phone) errors.push("رقم الهاتف مطلوب");
-      if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
-        errors.push("شهادة الترخيص مطلوبة");
-      }
+  if (role === "nurse") {
+    if (!data.specialty) errors.push("تخصص التمريض مطلوب");
+    if (!data.description) errors.push("الوصف مطلوب");
+    if (!data.price) errors.push("السعر مطلوب");
+    if (!data.location) errors.push("الموقع مطلوب");
+    if (!data.phone) errors.push("رقم الهاتف مطلوب");
+    if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
+      errors.push("شهادة الترخيص مطلوبة");
     }
+  }
 
-    if (role === "patient") {
-      if (!data.phone) errors.push("رقم الهاتف مطلوب");
-      if (!data.location) errors.push("الموقع مطلوب");
-    }
+  if (role === "patient") {
+    if (!data.phone) errors.push("رقم الهاتف مطلوب");
+    if (!data.location) errors.push("الموقع مطلوب");
+  }
 
-    return errors;
-  };
+  return errors;
+};
 
   try {
     const {
@@ -71,7 +73,7 @@ const registerUser = async (req, res) => {
           fileType: file.mimetype,
         }
       : null;
-
+  const image = req.file ? req.file.filename : 'default.png';
     const extraErrors = validateRoleData(role, {
       specialty,
       description,
@@ -95,6 +97,7 @@ const registerUser = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      image,
       gender,
       birthDate,
       phone,
@@ -127,11 +130,20 @@ const registerUser = async (req, res) => {
         status: "pending",
       });
     }
-    if (role === "patient") {
+        if (role === "patient") {
       await Patient.create({
         userId: user._id,
         phone,
         location,
+      });
+      await History.create({
+       patientId: patient._id,
+       chronicDiseases: req.body.chronicDiseases || [],
+       surgeries: req.body.surgeries || [],
+       medications: req.body.medications || [],
+       allergy: req.body.allergy || "",
+       visits: req.body.visits || [],
+       testFileUrl: req.body.testFileUrl || ""
       });
     }
     // وهكذا لباقي الـ roles
@@ -140,21 +152,23 @@ const registerUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    const otp = otpGenerator.generate(6, {
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
+const otp = otpGenerator.generate(6, {
+  upperCaseAlphabets: false,
+  specialChars: false
+});
 
-    await OTP.findOneAndUpdate(
-      { email },
-      { otp, expiresAt: Date.now() + 5 * 60 * 1000 },
-      { upsert: true }
-    );
+await OTP.findOneAndUpdate(
+  { email },
+  { otp, expiresAt: Date.now() + 5 * 60 * 1000 },
+  { upsert: true }
+);
 
-    await sendEmail(email, "رمز تأكيد الحساب", `رمز OTP الخاص بك هو: ${otp}`);
-    return res.status(201).json({
-      message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
-    });
+await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
+
+return res.status(201).json({
+  message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
+});
+
   } catch (err) {
     console.error(" Error in register:", err);
     res.status(500).json({
@@ -169,26 +183,28 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password)))
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+    }
 
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
+    }
+
+    // Check approval for doctor or nurse
     if (user.role === "doctor" || user.role === "nurse") {
-      const roleModel =
-        user.role === "doctor"
-          ? require("../models/doctor")
-          : require("../models/nurse");
+      const roleModel = user.role === "doctor"
+        ? require("../models/doctor")
+        : require("../models/nurse");
+
       const roleData = await roleModel.findOne({ userId: user._id });
 
-      if (!roleData || roleData.status !== "approved") {
+      if (!roleData || roleData.certificate.status !== "approved") {
         return res.status(403).json({
           message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
         });
       }
-    }
-    if (!user.isVerified) {
-      return res
-        .status(401)
-        .json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
     }
 
     const token = jwt.sign(
@@ -198,22 +214,23 @@ const loginUser = async (req, res) => {
     );
 
     res.status(200).json({ token, user });
-    
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 //  Forgot Password - Send OTP
 
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!user) return res.status(404).json({ message: 'User not found' });
 
   const otp = otpGenerator.generate(6, {
     upperCaseAlphabets: false,
-    specialChars: false,
+    specialChars: false
   });
 
   await OTP.findOneAndUpdate(
@@ -222,12 +239,9 @@ const forgotPassword = async (req, res) => {
     { upsert: true }
   );
 
-  await sendEmail(
-    email,
-    "رمز إعادة تعيين كلمة المرور",
-    `رمز OTP الخاص بك: ${otp}`
-  );
-  res.json({ message: "OTP sent to your email" });
+  await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
+
+  res.json({ message: 'OTP sent to your email' });
 };
 
 // ===============================
@@ -238,33 +252,31 @@ const verifyOtp = async (req, res) => {
   const record = await OTP.findOne({ email });
 
   if (!record || record.otp !== otp || record.expiresAt < Date.now()) {
-    return res.status(400).json({ message: "رمز OTP غير صحيح أو منتهي" });
+    return res.status(400).json({ message: 'رمز OTP غير صحيح أو منتهي' });
   }
 
   //  فعل الحساب
   const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+  if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
   user.isVerified = true;
   await user.save();
 
   await OTP.deleteOne({ email });
 
-  const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "1d",
-    }
-  );
+  const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
 
-  res.json({ message: "تم تأكيد الحساب بنجاح", token });
+  res.json({ message: 'تم تأكيد الحساب بنجاح', token });
 };
+
 //  Reset Password
+
 const resetPassword = async (req, res) => {
   const { email, newPassword } = req.body;
   const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!user) return res.status(404).json({ message: 'User not found' });
 
   const hashed = await bcrypt.hash(newPassword, 10);
   user.password = hashed;
@@ -272,7 +284,7 @@ const resetPassword = async (req, res) => {
 
   await OTP.deleteOne({ email });
 
-  res.json({ message: "تم تغيير كلمة المرور بنجاح" });
+  res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
 };
 
 //  resendOtp
@@ -293,7 +305,7 @@ const resendOtp = async (req, res) => {
 
     const otp = otpGenerator.generate(6, {
       upperCaseAlphabets: false,
-      specialChars: false,
+      specialChars: false
     });
 
     await OTP.findOneAndUpdate(
@@ -302,18 +314,15 @@ const resendOtp = async (req, res) => {
       { upsert: true }
     );
 
-    await sendEmail(
-      email,
-      "رمز تأكيد البريد الإلكتروني",
-      `رمز OTP الخاص بك هو: ${otp}`
-    );
+    await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
 
     res.json({ message: "تم إرسال رمز تأكيد جديد إلى بريدك الإلكتروني" });
+
   } catch (err) {
     res.status(500).json({ message: "حدث خطأ ما", error: err.message });
   }
 };
-const logoutUser = (req, res) => {
+ const logoutUser = (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
@@ -335,12 +344,14 @@ const getUser = async (req, res) => {
 
     return res.status(200).json({
       user,
-      profile,
+      profile
     });
+
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 const updateUser = async (req, res) => {
   try {
@@ -348,8 +359,13 @@ const updateUser = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(userId, req.body.user, {
       new: true,
-      runValidators: true,
+      runValidators: true
     }).select("-password");
+    
+    if (req.body.user?.email || req.body.user?.password) {
+      return res.status(400).json({ message: "You can't update email or password from here." });
+    }
+    // ✅ Update profile info
 
     let updatedProfile = null;
 
@@ -378,23 +394,15 @@ const updateUser = async (req, res) => {
     res.status(200).json({
       message: "User updated successfully",
       user: updatedUser,
-      profile: updatedProfile,
+      profile: updatedProfile
     });
+
   } catch (error) {
     res.status(500).json({ message: "Update failed", error: error.message });
   }
 };
 
+
 //  Exports
 
-module.exports = {
-  registerUser,
-  loginUser,
-  forgotPassword,
-  verifyOtp,
-  resetPassword,
-  resendOtp,
-  logoutUser,
-  getUser,
-  updateUser,
-};
+module.exports = {registerUser,loginUser,forgotPassword,verifyOtp,resetPassword,resendOtp,logoutUser,getUser,updateUser};

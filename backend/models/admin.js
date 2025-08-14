@@ -7,7 +7,13 @@ const adminProfileSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  accessLevel: { type: String, enum: ['super', 'normal'], default: 'normal' }
+  accessLevel: { 
+    type: String, 
+    enum: ['super', 'normal'], 
+    default: 'normal' 
+  }
+}, { 
+  timestamps: true
 });
 
 module.exports = mongoose.model('AdminProfile', adminProfileSchema);

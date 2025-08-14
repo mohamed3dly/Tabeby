@@ -7,10 +7,7 @@ const createReview = async (req, res) => {
 
         if (!doctor && !nurse)
             return res.status(400).json({ error: "Review must be for a doctor or a nurse." });
-
-        if (doctor && nurse)
-            return res.status(400).json({ error: "Review cannot be for both a doctor and a nurse." });
-
+        
         if (!rating || !comment)
             return res.status(400).json({ error: "Rating and comment are required." });
 
