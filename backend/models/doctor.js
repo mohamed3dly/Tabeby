@@ -1,5 +1,32 @@
 const mongoose = require("mongoose");
 
+const slotSchema = new mongoose.Schema({
+  start: { type: String, required: true }, 
+  end: { type: String, required: true },   
+  type: { type: String, enum: ["online", "clinic", "home"], required: true },
+  isBooked: { type: Boolean, default: false },
+  bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
+});
+
+
+const scheduleSchema = new mongoose.Schema({
+  day: {
+    type: String,
+    enum: [
+      "Saturday",
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+    ],
+    required: true,
+  },
+  slots: [slotSchema]
+});
+
+// Doctor Schema
 const doctorSchema = new mongoose.Schema(
   {
     userId: {
@@ -61,33 +88,12 @@ const doctorSchema = new mongoose.Schema(
       },
       rejectionReason: String,
     },
+    image: { type: String }, 
     isVerified: { type: Boolean, default: false },
     location: { type: String, required: true },
-    schedule: [
-      {
-        day: {
-          type: String,
-          enum: [
-            "السبت",
-            "الأحد",
-            "الاثنين",
-            "الثلاثاء",
-            "الاربعاء",
-            "الخميس",
-            "الجمعة",
-          ],
-        },
-        slots: [
-          {
-            start: String,
-            end: String,
-            type: { type: String, enum: ["online", "clinic", "home"] },
-          },
-        ],
-      },
-    ],
-    rating: { type: Number, default: 0, }, 
-    totalReviews: { type: Number},
+    schedule: [scheduleSchema],
+    rating: { type: Number, default: 0 }, 
+    totalReviews: { type: Number, default: 0 },
     google: {
       accessToken: String,
       refreshToken: String,
@@ -96,29 +102,5 @@ const doctorSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-const slotSchema = new mongoose.Schema({
-  start: { type: String, required: true }, // HH:mm
-  end: { type: String, required: true },   // HH:mm
-  type: { type: String, enum: ["online", "clinic", "home"], required: true },
-  isBooked: { type: Boolean, default: false },
-  bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
-});
-
-const scheduleSchema = new mongoose.Schema({
-  day: {
-    type: String,
-    enum: [
-      "Saturday",
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-    ],
-    required: true,
-  },
-  slots: [slotSchema]
-});
 
 module.exports = mongoose.model("Doctor", doctorSchema);

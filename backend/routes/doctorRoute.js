@@ -9,21 +9,23 @@ const {
   getDoctorById,
   getAllDoctors,
   updateDoctorProfile,
+  addDoctor
 } = require("../controllers/doctorController");
 
-router.post("/certificate", upload.single("file"), uploadCertificate);
-router.get("/:id", getDoctorById);
-router.get("/", getAllDoctors);
-router.patch("/:id", authMiddleware, updateDoctorProfile);
+router.post("/add",upload.fields([{ name: "certificate", maxCount: 1 },{ name: "image", maxCount: 1 }]),addDoctor);
 
 router.get("/doctors", async (req, res) => {
-  const sortBy = req.query.sortBy; // 'name' أو 'rating'
+  const sortBy = req.query.sortBy;
   try {
-    const doctors = await getSortedData("doctor", sortBy);
+    const doctors = await getSortedData("Doctor", sortBy);
     res.json(doctors);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.get("/:id", getDoctorById);
+router.patch("/:id", authMiddleware, updateDoctorProfile);
+router.get("/", getAllDoctors);
 
 module.exports = router;

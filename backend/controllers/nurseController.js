@@ -92,10 +92,30 @@ const updateNurseProfile = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+const addNurse = async (req, res) => {
+  try {
+    const { name, email, specialization, phone, address } = req.body;
+
+    const newNurse = new Nurse({
+      name,
+      email,
+      specialization,
+      phone,
+      address,
+      image: req.file ? req.file.path : null, // لو في صورة
+    });
+
+    await newNurse.save();
+    res.status(201).json({ message: "Nurse added successfully", nurse: newNurse });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   uploadCertificate,
   getAllNurses,
   getNurseById,
-  updateNurseProfile
+  updateNurseProfile,
+  addNurse
 };

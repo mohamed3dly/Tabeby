@@ -90,10 +90,39 @@ const updateDoctorProfile = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+const addDoctor = async (req, res) => {
+  try {
+    const doctorData = req.body;
 
+    // لو فيه شهادة
+    if (req.files && req.files.certificate) {
+      doctorData.certificate = {
+        fileUrl: req.files.certificate[0].path,
+        fileType: req.files.certificate[0].mimetype,
+        status: "pending"
+      };
+    }
+
+    // لو فيه صورة
+    if (req.files && req.files.image) {
+      doctorData.image = req.files.image[0].path;
+    }
+
+    const doctor = new Doctor(doctorData);
+    await doctor.save();
+
+    res.status(201).json({
+      message: "Doctor added successfully",
+      doctor
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
 module.exports = {
   uploadCertificate,
   getAllDoctors,
   getDoctorById,
-  updateDoctorProfile
+  updateDoctorProfile,
+  addDoctor
 };
