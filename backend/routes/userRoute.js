@@ -16,7 +16,15 @@ const {
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
-router.post('/register', upload.single('image'), registerUser);
+router.post(
+  "/register",
+  upload.fields([
+    { name: "image", maxCount: 1 },      
+    { name: "certificate", maxCount: 1 }  
+  ]),
+  registerUser
+);
+
 router.post("/login", loginUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);

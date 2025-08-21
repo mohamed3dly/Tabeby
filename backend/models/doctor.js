@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const slotSchema = new mongoose.Schema({
-  start: { type: String, required: true }, 
-  end: { type: String, required: true },   
+  start: { type: String, required: true },
+  end: { type: String, required: true },
   type: { type: String, enum: ["online", "clinic", "home"], required: true },
   isBooked: { type: Boolean, default: false },
   bookedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
@@ -37,30 +37,30 @@ const doctorSchema = new mongoose.Schema(
     },
     title: {
       type: String,
-      enum: ["دكتور", "استشاري", "أستاذ دكتور"],
+      enum: ["Doctor", "Consultant", "Professor"],
       required: true,
     },
     specialty: {
       type: String,
       enum: [
-        "جلدية",
-        "اسنان",
-        "نفسي",
-        "اطفال وحديثي الولادة",
-        "مخ واعصاب",
-        "عظام",
-        "نساء وتوليد",
-        "انف واذن وحنجرة",
-        "قلب واوعية دموية",
-        "الآشعة التداخلية",
-        "امراض دم",
-        "اورام",
-        "باطنة",
-        "تخسيس وتغذية",
-        "جراحة اطفال",
-        "جراحة أورام",
-        "جراحة اوعية دموية",
-        "جراحة تجميل",
+        "Dermatology",               // جلدية
+        "Dentistry",                 // اسنان
+        "Psychiatry",                // نفسي
+        "Pediatrics and Neonatology",// اطفال وحديثي الولادة
+        "Neurology",                 // مخ واعصاب
+        "Orthopedics",               // عظام
+        "Gynecology and Obstetrics", // نساء وتوليد
+        "ENT",                       // انف واذن وحنجرة
+        "Cardiology",                // قلب واوعية دموية
+        "Interventional Radiology",  // الآشعة التداخلية
+        "Hematology",                // امراض دم
+        "Oncology",                  // اورام
+        "Internal Medicine",         // باطنة
+        "Nutrition and Weight Loss", // تخسيس وتغذية
+        "Pediatric Surgery",         // جراحة اطفال
+        "Oncological Surgery",       // جراحة أورام
+        "Vascular Surgery",          // جراحة اوعية دموية
+        "Plastic Surgery",           // جراحة تجميل
       ],
       required: true,
     },
@@ -80,7 +80,6 @@ const doctorSchema = new mongoose.Schema(
     },
     certificate: {
       fileUrl: { type: String, required: true },
-      fileType: { type: String, required: true },
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
@@ -88,11 +87,11 @@ const doctorSchema = new mongoose.Schema(
       },
       rejectionReason: String,
     },
-    image: { type: String }, 
+    image: { type: String },
     isVerified: { type: Boolean, default: false },
     location: { type: String, required: true },
     schedule: [scheduleSchema],
-    rating: { type: Number, default: 0 }, 
+    rating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
     google: {
       accessToken: String,
