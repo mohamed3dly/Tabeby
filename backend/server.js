@@ -3,12 +3,9 @@ require('./config/passport'); // لو ملفك جوه config أو أي مكان 
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-<<<<<<< HEAD
 const session = require('express-session');
 
 
-=======
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
 connectDB();
 
 const app = express();
@@ -36,7 +33,6 @@ app.use("/api/google", authRoutes);
 const reviewRoutes = require("./routes/review");
 app.use("/reviews", reviewRoutes);
 
-<<<<<<< HEAD
 const bookingRoutes = require("./routes/booking");
 app.use("/bookings", bookingRoutes);
 
@@ -47,8 +43,6 @@ const paymentRoutes = require("./routes/paymentRoutes");
 app.use("/api/payments", paymentRoutes);
 
 
-=======
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
