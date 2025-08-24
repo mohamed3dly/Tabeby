@@ -30,6 +30,24 @@ const uploadCertificate = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+const uploadProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.image = file.filename; // احفظ اسم الملف
+    await user.save();
+
+    res.json({ message: "Profile image uploaded", image: `/uploads/${file.filename}` });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 // 📌 عرض جميع الأطباء
 const getAllDoctors = async (req, res) => {
@@ -112,37 +130,46 @@ const updateDoctorProfile = async (req, res) => {
 
 const getAvailableDays = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.params.id).select("schedule");
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
-
-    // رجع الأيام اللي فيها slots فاضية
-    const days = doctor.schedule
-      .filter(d => d.slots.some(slot => !slot.isBooked))
-      .map(d => d.day);
-
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 21; i++) {
+      const nextDay = new Date(today);
+      nextDay.setDate(today.getDate() + i);
+      days.push(nextDay.toDateString()); // "Mon Aug 25 2025"
+    }
     res.json(days);
   } catch (error) {
     res.status(500).json({ message: "Error fetching available days", error: error.message });
   }
 };
+
 const getAvailableTimes = async (req, res) => {
   try {
-    const { id, day } = req.params;
-    const doctor = await Doctor.findById(id).select("schedule");
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
-
-    const scheduleDay = doctor.schedule.find(d => d.day === day);
-    if (!scheduleDay) return res.json([]);
-
-    const times = scheduleDay.slots
-      .filter(slot => !slot.isBooked)
-      .map(slot => `${slot.start} - ${slot.end}`);
-
+    const times = [];
+    let hour = 12;
+    let minute = 0;
+    while (hour < 24 || (hour === 23 && minute <= 30)) {
+      const h = hour > 12 ? hour - 12 : hour;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const start = `${h}:${minute === 0 ? '00' : minute} ${ampm}`;
+      minute += 30;
+      if (minute === 60) {
+        hour += 1;
+        minute = 0;
+      }
+      const hEnd = hour > 12 ? hour - 12 : hour;
+      const ampmEnd = hour >= 12 ? 'PM' : 'PM';
+      const end = `${hEnd}:${minute === 0 ? '00' : minute} ${ampmEnd}`;
+      times.push(`${start} - ${end}`);
+    }
     res.json(times);
   } catch (error) {
     res.status(500).json({ message: "Error fetching available times", error: error.message });
   }
 };
+
+
+
 
 module.exports = {
   uploadCertificate,

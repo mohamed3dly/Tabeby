@@ -10,8 +10,6 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require('otp-generator');
 const sendEmail = require('../utils/sendEmail');
 
-
-//  Register
 //  Register
 const registerUser = async (req, res) => {
   const validateRoleData = (role, data) => {
