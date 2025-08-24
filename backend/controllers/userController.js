@@ -17,20 +17,17 @@ const registerUser = async (req, res) => {
   const validateRoleData = (role, data) => {
     const errors = [];
 
-    if (role === "doctor") {
-      if (!data.specialty) errors.push("التخصص مطلوب");
-      if (!data.description) errors.push("الوصف مطلوب");
-      if (!data.title) errors.push("اللقب مطلوب");
-      if (!data.price) errors.push("السعر مطلوب");
-      if (!data.location) errors.push("الموقع مطلوب");
-      if (!data.phone) errors.push("رقم الهاتف مطلوب");
-      if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
-        errors.push("شهادة الترخيص مطلوبة");
-      }
-      if (!data.image) {
-        errors.push("صورة المستخدم مطلوبة");
-      }
+  if (role === "doctor") {
+    if (!data.specialty) errors.push("التخصص مطلوب");
+    if (!data.description) errors.push("الوصف مطلوب");
+    if (!data.title) errors.push("اللقب مطلوب");
+    if (!data.price) errors.push("السعر مطلوب");
+    if (!data.location) errors.push("الموقع مطلوب");
+    if (!data.phone) errors.push("رقم الهاتف مطلوب");
+    if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
+      errors.push("شهادة الترخيص مطلوبة");
     }
+  }
 
     if (role === "nurse") {
       if (!data.specialty) errors.push("تخصص التمريض مطلوب");
@@ -72,8 +69,8 @@ const registerUser = async (req, res) => {
 
     const certificate = certificateFile
       ? {
-          fileUrl: certificateFile.path,
-          fileType: certificateFile.mimetype,
+          fileUrl: file.path,
+          fileType: file.mimetype,
         }
       : null;
 
@@ -139,9 +136,8 @@ const registerUser = async (req, res) => {
         status: "pending",
       });
     }
-
-    if (role === "patient") {
-      const patient = await Patient.create({
+        if (role === "patient") {
+      await Patient.create({
         userId: user._id,
         phone,
         location,
@@ -163,11 +159,21 @@ const registerUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    return res.status(201).json({
-      message: "تم التسجيل بنجاح",
-      token,
-      user,
-    });
+const otp = otpGenerator.generate(6, {
+  upperCaseAlphabets: false,
+  specialChars: false
+});
+
+await OTP.findOneAndUpdate(
+  { email },
+  { otp, expiresAt: Date.now() + 5 * 60 * 1000 },
+  { upsert: true }
+);
+
+await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
+return res.status(201).json({
+  message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
+});
 
   } catch (err) {
     console.error(" Error in register:", err);
@@ -323,7 +329,7 @@ const resendOtp = async (req, res) => {
     res.status(500).json({ message: "حدث خطأ ما", error: err.message });
   }
 };
- const logoutUser = (req, res) => {
+const logoutUser = (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
@@ -367,7 +373,6 @@ const updateUser = async (req, res) => {
       return res.status(400).json({ message: "You can't update email or password from here." });
     }
     // ✅ Update profile info
-
     let updatedProfile = null;
 
     if (req.body.profile) {

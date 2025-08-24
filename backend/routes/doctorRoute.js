@@ -5,19 +5,24 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const getSortedData = require("../utils/sort");
 
 const {
-  getDoctorById,
-  getAllDoctors,
-  updateDoctorProfile,
+    getDoctorById,
+    getAllDoctors,
+    updateDoctorProfile,
+    getAvailableDays,
+    getAvailableTimes
 } = require("../controllers/doctorController");
+router.get("/doctors/:id/available-days", getAvailableDays);
 
+
+router.get("/doctors/:id/available-times/:day", getAvailableTimes);
 router.get("/doctors", async (req, res) => {
-  const sortBy = req.query.sortBy;
-  try {
-    const doctors = await getSortedData("Doctor", sortBy);
-    res.json(doctors);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const sortBy = req.query.sortBy;
+    try {
+        const doctors = await getSortedData("Doctor", sortBy);
+        res.json(doctors);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 router.get("/:id", getDoctorById);
