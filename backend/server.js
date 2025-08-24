@@ -3,12 +3,9 @@ require('./config/passport'); // لو ملفك جوه config أو أي مكان 
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-<<<<<<< HEAD
 const session = require('express-session');
 
 
-=======
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
 connectDB();
 
 const app = express();
@@ -27,6 +24,10 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+const specialtyRoutes = require("./routes/specialtyRoutes");
+app.use("/api/specialties", specialtyRoutes);
+
+
 const userRoutes = require("./routes/userRoute");
 app.use("/users", userRoutes);
 
@@ -36,7 +37,6 @@ app.use("/api/google", authRoutes);
 const reviewRoutes = require("./routes/review");
 app.use("/reviews", reviewRoutes);
 
-<<<<<<< HEAD
 const bookingRoutes = require("./routes/booking");
 app.use("/bookings", bookingRoutes);
 
@@ -46,10 +46,17 @@ app.use("/admin", adminUserRoute);
 const paymentRoutes = require("./routes/paymentRoutes");
 app.use("/api/payments", paymentRoutes);
 
+const doctorRoutes = require("./routes/doctorRoute");
+app.use("/doctors", doctorRoutes);
 
-=======
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
-const PORT = process.env.PORT || 5000;
+const filterRoutes = require("./routes/filterRoute");
+app.use("/api", filterRoutes);
+
+
+const PORT = process.env.PORT || 3000;
+
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

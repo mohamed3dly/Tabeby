@@ -42,18 +42,64 @@ exports.getPendingUsers = async (req, res) => {
 };
 
 // 4. قبول أو رفض حساب دكتور أو ممرض
+// exports.updateVerificationStatus = async (req, res) => {
+//   try {
+//     const { userId, role } = req.params;
+//     const { status, rejectionReason } = req.body;
+
+//     if (!['approved', 'rejected'].includes(status)) {
+//       return res.status(400).json({ message: 'Invalid status value' });
+//     }
+
+//     let model;
+//     if (role === "doctor") model = Doctor;
+//     else if (role === "nurse") model = Nurse;
+//     else return res.status(400).json({ message: "Invalid role" });
+
+//     const profile = await model.findOne({ userId });
+//     if (!profile) return res.status(404).json({ message: `${role} profile not found` });
+
+//     profile.certificate.status = status;
+
+//     // تحديث حالة التوثيق داخل profile
+//     if (status === "rejected") {
+//       profile.certificate.rejectionReason = rejectionReason || "";
+//       profile.isVerified = false;
+//     } else {
+//       profile.certificate.rejectionReason = "";
+//       profile.isVerified = true;
+//     }
+
+//     await profile.save();
+
+//     // كمان نحدث حالة اليوزر نفسه
+//     const user = await User.findById(userId);
+//     if (user) {
+//       user.isVerified = status === "approved";
+//       await user.save();
+//     }
+
+//     res.json({ message: `${role} verification status updated to ${status}` });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// };
 exports.updateVerificationStatus = async (req, res) => {
   try {
     const { userId, role } = req.params;
     const { status, rejectionReason } = req.body;
+
+    console.log("🔍 role from params:", role);
+    console.log("🔍 userId from params:", userId);
 
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
     let model;
-    if (role === "doctor") model = Doctor;
-    else if (role === "nurse") model = Nurse;
+    if (role.toLowerCase() === "doctor") model = Doctor;
+    else if (role.toLowerCase() === "nurse") model = Nurse;
     else return res.status(400).json({ message: "Invalid role" });
 
     const profile = await model.findOne({ userId });
@@ -61,7 +107,6 @@ exports.updateVerificationStatus = async (req, res) => {
 
     profile.certificate.status = status;
 
-    // تحديث حالة التوثيق داخل profile
     if (status === "rejected") {
       profile.certificate.rejectionReason = rejectionReason || "";
       profile.isVerified = false;
@@ -72,7 +117,6 @@ exports.updateVerificationStatus = async (req, res) => {
 
     await profile.save();
 
-    // كمان نحدث حالة اليوزر نفسه
     const user = await User.findById(userId);
     if (user) {
       user.isVerified = status === "approved";
@@ -85,6 +129,7 @@ exports.updateVerificationStatus = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
 
 // 5. تفاصيل مستخدم (مع بيانات إضافية حسب الدور)
 exports.getUserDetails = async (req, res) => {
@@ -108,18 +153,50 @@ exports.getUserDetails = async (req, res) => {
 };
 
 // 6. تعطيل / تفعيل مستخدم
+// exports.toggleUserActivation = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+//     const user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     user.isActive = !user.isActive;
+//     await user.save();
+
+//     res.json({ message: `User is now ${user.isActive ? "Active" : "Inactive"}` });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// };
+
 exports.toggleUserActivation = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
 
+    // نجيب اليوزر
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // نقلب قيمة الـ isActive
     user.isActive = !user.isActive;
     await user.save();
 
-    res.json({ message: `User is now ${user.isActive ? "Active" : "Inactive"}` });
+    // لو اليوزر دكتور نعدل برضه في Doctor model
+    const doctor = await Doctor.findOne({ userId: user._id });
+    if (doctor) {
+      doctor.isActive = user.isActive;
+      await doctor.save();
+    }
+
+    res.json({
+      success: true,
+      message: `User is now ${user.isActive ? "active" : "inactive"}`,
+      isActive: user.isActive,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error("Error toggling user activation:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 

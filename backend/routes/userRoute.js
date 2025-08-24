@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middlewares/authMiddleware");
 
 const {
   registerUser,
@@ -12,10 +11,22 @@ const {
   logoutUser,
   getUser,
   updateUser,
+  verifyOtpReset
 } = require("../controllers/userController");
 
 const upload = require("../middlewares/multer");
 const authMiddleware = require("../middlewares/authMiddleware");
+
+
+// routes/userRoute.js
+router.get("/all", async (req, res) => {
+  try {
+    const users = await require("../models/user").find({});
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 
 router.post("/register", upload.single("certificate"), registerUser);
@@ -24,12 +35,10 @@ router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
 router.post("/resend-otp", resendOtp);
+router.post("/verify-otp-reset", verifyOtpReset);
 router.post("/logout", logoutUser);
-<<<<<<< HEAD
 router.get("/getUser", authMiddleware, getUser);       
 router.patch("/updateUser", authMiddleware, updateUser); 
-=======
-router.get("/getUser", protect, getUser);
-router.patch("/updateUser", protect, updateUser);
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
+// router.get("/getUser", authMiddleware, getUser);
+// router.patch("/updateUser", authMiddleware, updateUser);
 module.exports = router;

@@ -16,7 +16,6 @@ const doctorSchema = new mongoose.Schema({
     type: String,
     enum: [
       "جلدية",
-      "اسنان",
       "نفسي",
       "اطفال وحديثي الولادة",
       "مخ واعصاب",
@@ -71,6 +70,10 @@ const doctorSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false,
+  },
+   isActive: {   // ✅ أضفنا الحقل هنا
+    type: Boolean,
+    default: true,
   },
   location: {
     type: String,

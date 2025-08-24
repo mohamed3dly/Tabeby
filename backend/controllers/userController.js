@@ -5,6 +5,7 @@ const Patient = require("../models/patient");
 const OTP = require("../models/otp");
 const History = require("../models/patientHistory");
 const authMiddleware = require("../middlewares/authMiddleware");
+const mongoose = require("mongoose");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -15,6 +16,8 @@ const sendEmail = require('../utils/sendEmail');
 //  Register
 
 const registerUser = async (req, res) => {
+  console.log('req.file:', req.file);
+console.log('req.body:', req.body);
   const validateRoleData = (role, data) => {
   const errors = [];
 
@@ -90,6 +93,14 @@ const registerUser = async (req, res) => {
         error: extraErrors.join(" - "),
       });
     }
+    // بعد validateRoleData و قبل إنشاء اليوزر
+const existingUser = await User.findOne({ email });
+if (existingUser) {
+  return res.status(400).json({
+    message: "الإيميل مستخدم بالفعل",
+    error: "هذا البريد الإلكتروني مسجل من قبل"
+  });
+}
 
     //  دلوقتي خلاص متأكدين إن البيانات سليمة، نبدأ نسجل
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -129,22 +140,23 @@ const registerUser = async (req, res) => {
         status: "pending",
       });
     }
-        if (role === "patient") {
-      await Patient.create({
-        userId: user._id,
-        phone,
-        location,
-      });
-      await History.create({
-       patientId: patient._id,
-       chronicDiseases: req.body.chronicDiseases || [],
-       surgeries: req.body.surgeries || [],
-       medications: req.body.medications || [],
-       allergy: req.body.allergy || "",
-       visits: req.body.visits || [],
-       testFileUrl: req.body.testFileUrl || ""
-      });
-    }
+    if (role === "patient") {
+  const patient = await Patient.create({
+    userId: user._id,
+    phone,
+    location,
+  });
+  await History.create({
+    patientId: patient._id,
+    chronicDiseases: req.body.chronicDiseases || [],
+    surgeries: req.body.surgeries || [],
+    medications: req.body.medications || [],
+    allergy: req.body.allergy || "",
+    visits: req.body.visits || [],
+    testFileUrl: req.body.testFileUrl || ""
+  });
+}
+
     // وهكذا لباقي الـ roles
 
     const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, {
@@ -165,6 +177,9 @@ await OTP.findOneAndUpdate(
 await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
 return res.status(201).json({
   message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
+  success: true,
+  // userId: user._id,
+  // role: user.role
 });
 
   } catch (err) {
@@ -177,27 +192,197 @@ return res.status(201).json({
 };
 
 //  Login
+// const loginUser = async (req, res) => {
+//   const { email, password } = req.body;
+//   try {
+//     const user = await User.findOne({ email });
+//     if (!user || !(await bcrypt.compare(password, user.password))) {
+//       return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+//     }
+
+//     // Check if email is verified
+//     if (!user.isVerified) {
+//       return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
+//     }
+
+//     // Check approval for doctor or nurse
+//     // if (user.role === "doctor" || user.role === "nurse") {
+//     //   const roleModel = user.role === "doctor"
+//     //     ? require("../models/doctor")
+//     //     : require("../models/nurse");
+
+//     //   const roleData = await roleModel.findOne({ userId: user._id });
+
+//     //   if (!roleData || roleData.certificate.status !== "approved") {
+//     //     return res.status(403).json({
+//     //       message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
+//     //     });
+//     //   }
+//     // }
+//     if (user.role === "doctor" || user.role === "nurse") {
+//   const roleModel = user.role === "doctor"
+//     ? require("../models/doctor")
+//     : require("../models/nurse");
+
+//   const roleData = await roleModel.findOne({ userId: user._id });
+
+//   if (!roleData || roleData.status !== "approved") {
+//     return res.status(403).json({
+//       message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
+//     });
+//   }
+// }
+
+//     const token = jwt.sign(
+//       { id: user._id, 
+//         role: user.role,
+//         name: user.fullName,   // ✅ ضيف الاسم
+//        email: user.email },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "1d" }
+//     );
+
+//     res.status(200).json({ token, user: {
+//     id: user._id,
+//     name: user.name,
+//     role: user.role
+//   } });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+// ✅ LOGIN
+// const loginUser = async (req, res) => {
+//   try {
+//     let { email, password } = req.body;
+
+//     // 1) Normalize email
+//     email = email.toLowerCase().trim();
+//     console.log("📩 Login attempt with:", email);
+
+//     // 2) اطبع اسم الـ DB
+//     console.log("📂 Current DB:", mongoose.connection.name);
+
+//     // 3) اطبع عدد اليوزرز + أول 10 ايميلات
+//     const allUsers = await User.find({});
+//     console.log("👥 Total users in DB:", allUsers.length);
+//     console.log("📧 Sample emails:", allUsers.map(u => u.email).slice(0, 10));
+
+//     // 4) دور على اليوزر
+//     const user = await User.findOne({ email });
+//     console.log("🔍 User found:", user ? "✅ YES" : "❌ NO");
+
+//     if (!user) {
+//       return res.status(401).json({ message: "بيانات الدخول غير صحيحة (user not found)" });
+//     }
+
+//     // 5) Check password
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     console.log("🔑 Password match:", isMatch ? "✅ YES" : "❌ NO");
+
+//     if (!isMatch) {
+//       return res.status(401).json({ message: "بيانات الدخول غير صحيحة (wrong password)" });
+//     }
+
+//     // 6) Check email verification
+//     if (!user.isVerified) {
+//       return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
+//     }
+
+//     // 7) Check approval if doctor or nurse
+//     if (user.role === "doctor" || user.role === "nurse") {
+//       const roleModel =
+//         user.role === "doctor"
+//           ? require("../models/doctor")
+//           : require("../models/nurse");
+
+//       const roleData = await roleModel.findOne({ userId: user._id });
+
+//       if (!roleData || roleData.status !== "approved") {
+//         return res.status(403).json({
+//           message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
+//         });
+//       }
+//     }
+
+//     // 8) Generate token
+//     const token = jwt.sign(
+//       {
+//         id: user._id,
+//         role: user.role,
+//         name: user.fullName || user.name || "",
+//         email: user.email,
+//       },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "1d" }
+//     );
+
+//     // 9) Response
+//     res.status(200).json({
+//       token,
+//       user: {
+//         id: user._id,
+//         email: user.email,
+//         name: user.fullName || user.name || "",
+//         role: user.role,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("🔥 Login error:", err);
+//     res.status(500).json({ message: "خطأ في السيرفر" });
+//   }
+// };
+
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
   try {
+    let { email, password } = req.body;
+
+    // 1) Normalize email
+    email = email.toLowerCase().trim();
+    console.log("📩 Login attempt with:", email);
+
+    // 2) اطبع اسم الـ DB
+    console.log("📂 Current DB:", mongoose.connection.name);
+
+    // 3) اطبع عدد اليوزرز + أول 10 ايميلات
+    const allUsers = await User.find({});
+    console.log("👥 Total users in DB:", allUsers.length);
+    console.log("📧 Sample emails:", allUsers.map(u => u.email).slice(0, 10));
+
+    // 4) دور على اليوزر
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+    console.log("🔍 User found:", user ? "✅ YES" : "❌ NO");
+
+    if (!user) {
+      return res.status(401).json({ message: "بيانات الدخول غير صحيحة (user not found)" });
     }
 
-    // Check if email is verified
+    // 5) Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("🔑 Password match:", isMatch ? "✅ YES" : "❌ NO");
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "بيانات الدخول غير صحيحة (wrong password)" });
+    }
+
+    // 6) Check email verification
     if (!user.isVerified) {
       return res.status(401).json({ message: "يرجى تأكيد الإيميل أولًا قبل تسجيل الدخول" });
     }
 
-    // Check approval for doctor or nurse
+    // 7) Check approval if doctor or nurse
     if (user.role === "doctor" || user.role === "nurse") {
-      const roleModel = user.role === "doctor"
-        ? require("../models/doctor")
-        : require("../models/nurse");
+      const roleModel =
+        user.role === "doctor"
+          ? require("../models/doctor")
+          : require("../models/nurse");
 
       const roleData = await roleModel.findOne({ userId: user._id });
 
+      // ✅ تعديل هنا
       if (!roleData || roleData.certificate.status !== "approved") {
         return res.status(403).json({
           message: "لم تتم الموافقة على الحساب بعد من قبل الأدمن",
@@ -205,18 +390,34 @@ const loginUser = async (req, res) => {
       }
     }
 
+    // 8) Generate token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        name: user.fullName || user.name || "",
+        email: user.email,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    res.status(200).json({ token, user });
-
+    // 9) Response
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.fullName || user.name || "",
+        role: user.role,
+      },
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("🔥 Login error:", err);
+    res.status(500).json({ message: "خطأ في السيرفر" });
   }
 };
+
 
 
 //  Forgot Password - Send OTP
@@ -271,18 +472,66 @@ const verifyOtp = async (req, res) => {
 //  Reset Password
 
 const resetPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: 'User not found' });
+  try {
+    const { email, otp, newPassword } = req.body;
 
-  const hashed = await bcrypt.hash(newPassword, 10);
-  user.password = hashed;
-  await user.save();
+    // 1) Check if OTP exists and valid
+    const record = await OTP.findOne({ email });
+    if (!record || record.otp !== otp || record.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "رمز OTP غير صحيح أو منتهي" });
+    }
 
-  await OTP.deleteOne({ email });
+    // 2) Find user
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
 
-  res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
+    // 3) Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10);
+    user.password = hashed;
+    await user.save();
+
+    // 4) Delete OTP after use
+    await OTP.deleteOne({ email });
+
+    res.json({ message: "تم تغيير كلمة المرور بنجاح" });
+  } catch (err) {
+    console.error("🔥 Reset password error:", err);
+    res.status(500).json({ message: "حدث خطأ في السيرفر" });
+  }
 };
+//
+// Verify OTP for Reset Password
+const verifyOtpReset = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // 1. نجيب الـ OTP من الداتا
+    const record = await OTP.findOne({ email });
+    if (!record) {
+      return res.status(400).json({ message: "لا يوجد رمز OTP لهذا البريد" });
+    }
+
+    // 2. تحقق من صلاحية الكود
+    if (record.otp !== otp || record.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "رمز OTP غير صحيح أو منتهي" });
+    }
+
+    // 3. تحقق من وجود المستخدم
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+    }
+
+    // 4. امسح الكود بعد ما يتأكد
+    await OTP.deleteOne({ email });
+
+    // 5. رجّع OK → عشان يكمّل reset password
+    res.json({ message: "تم تأكيد الرمز بنجاح، يمكنك الآن تغيير كلمة المرور" });
+  } catch (err) {
+    res.status(500).json({ message: "حدث خطأ ما", error: err.message });
+  }
+};
+
 
 //  resendOtp
 
@@ -323,10 +572,6 @@ const resendOtp = async (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
-<<<<<<< HEAD
-
-=======
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
 
 const getUser = async (req, res) => {
   try {
@@ -362,15 +607,12 @@ const updateUser = async (req, res) => {
       new: true,
       runValidators: true
     }).select("-password");
-<<<<<<< HEAD
     
     if (req.body.user?.email || req.body.user?.password) {
       return res.status(400).json({ message: "You can't update email or password from here." });
     }
     // ✅ Update profile info
-=======
 
->>>>>>> f2a521d65dc8475fea0fc8df1383b22a17fc4075
     let updatedProfile = null;
 
     if (req.body.profile) {
@@ -409,4 +651,4 @@ const updateUser = async (req, res) => {
 
 //  Exports
 
-module.exports = {registerUser,loginUser,forgotPassword,verifyOtp,resetPassword,resendOtp,logoutUser,getUser,updateUser};
+module.exports = {registerUser,loginUser,forgotPassword,verifyOtp,resetPassword,resendOtp,logoutUser,getUser,updateUser,verifyOtpReset};

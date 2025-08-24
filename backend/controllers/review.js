@@ -1,4 +1,7 @@
 const Review = require("../models/review.js");
+const User = require("../models/user");
+const Doctor = require("../models/doctor");
+
 
 const createReview = async (req, res) => {
     try {
@@ -104,10 +107,82 @@ const deleteReview = async (req, res) => {
     }
 };
 
+// Top rated doctors
+
+
+const getTopDoctors = async (req, res) => {
+  try {
+    // 1️⃣ جلب أفضل الدكاترة حسب التقييم
+    const topReviews = await Review.aggregate([
+      { $match: { doctor: { $ne: null } } },
+      { $group: {
+          _id: "$doctor",
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+      }},
+      { $sort: { avgRating: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // 2️⃣ جلب بيانات الدكاترة وبيانات الـuser
+    const topDoctors = await Promise.all(topReviews.map(async r => {
+      const doctor = await Doctor.findById(r._id).populate('userId', 'fullName email role');
+      if (!doctor) return null;
+      return {
+        _id: doctor._id,
+        avgRating: r.avgRating,
+        totalReviews: r.totalReviews,
+        specialty: doctor.specialty,
+        description: doctor.description,
+        price: doctor.price,
+        location: doctor.location,
+        title: doctor.title,
+        user: doctor.userId // الاسم والإيميل والrole
+      };
+    }));
+
+    // 3️⃣ حذف أي null لو فيه دكاترة مش موجودة
+    res.status(200).json(topDoctors.filter(d => d !== null));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// Top rated nurses
+const getTopNurses = async (req, res) => {
+  try {
+    const topNurses = await Review.aggregate([
+      { $match: { nurse: { $ne: null } } },
+      { $group: {
+          _id: "$nurse",
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+      }},
+      { $sort: { avgRating: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "nurses",
+          localField: "_id",
+          foreignField: "_id",
+          as: "nurseInfo"
+        }
+      },
+      { $unwind: "$nurseInfo" }
+    ]);
+
+    res.status(200).json(topNurses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 module.exports = {
     createReview,
     getAllReviews,
     getDoctorReviews,
     getNurseReviews,
     deleteReview,
+    getTopDoctors,
+    getTopNurses
 };

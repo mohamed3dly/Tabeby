@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   fullName: {
@@ -9,7 +10,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Email is required'],
     unique: true,
-    lowercase: true,
     match: [/\S+@\S+\.\S+/, 'Invalid email format']
   },
   phone: {
@@ -22,9 +22,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [ function () {
     return !this.google?.googleId;  // Required فقط لو مش جاي من Google
-  },, 'Password is required'],
+  }, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters'],
-    match: [/(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}/, 'Invalid password format']
+    // match: [/(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}/, 'Invalid password format']
   },
   isVerified: {
     type: Boolean,
@@ -63,7 +63,21 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  //  image: { 
+  //   type: String, 
+  //   default: 'default.png' 
+  // }
 }, { timestamps: true });
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
 
-module.exports = mongoose.model('User', userSchema);
+// ميثود لمقارنة الباسورد
+userSchema.methods.comparePassword = function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema,"users");
