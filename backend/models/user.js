@@ -69,11 +69,7 @@ const userSchema = new mongoose.Schema({
     default: 'default.png' 
   }
 }, { timestamps: true });
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
+
 
 // ميثود لمقارنة الباسورد
 userSchema.methods.comparePassword = function (candidatePassword) {

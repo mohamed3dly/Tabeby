@@ -20,38 +20,38 @@ const sendEmail = require('../utils/sendEmail');
 
 const registerUser = async (req, res) => {
   const validateRoleData = (role, data) => {
-  const errors = [];
+    const errors = [];
 
-  if (role === "doctor") {
-    if (!data.specialty) errors.push("التخصص مطلوب");
-    if (!data.description) errors.push("الوصف مطلوب");
-    if (!data.title) errors.push("اللقب مطلوب");
-    if (!data.price) errors.push("السعر مطلوب");
-    if (!data.location) errors.push("الموقع مطلوب");
-    if (!data.phone) errors.push("رقم الهاتف مطلوب");
-    if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
-      errors.push("شهادة الترخيص مطلوبة");
+    if (role === "doctor") {
+      if (!data.specialty) errors.push("التخصص مطلوب");
+      if (!data.description) errors.push("الوصف مطلوب");
+      if (!data.title) errors.push("اللقب مطلوب");
+      if (!data.price) errors.push("السعر مطلوب");
+      if (!data.location) errors.push("الموقع مطلوب");
+      if (!data.phone) errors.push("رقم الهاتف مطلوب");
+      if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
+        errors.push("شهادة الترخيص مطلوبة");
+      }
     }
-  }
 
-  if (role === "nurse") {
-    if (!data.specialty) errors.push("تخصص التمريض مطلوب");
-    if (!data.description) errors.push("الوصف مطلوب");
-    if (!data.price) errors.push("السعر مطلوب");
-    if (!data.location) errors.push("الموقع مطلوب");
-    if (!data.phone) errors.push("رقم الهاتف مطلوب");
-    if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
-      errors.push("شهادة الترخيص مطلوبة");
+    if (role === "nurse") {
+      if (!data.specialty) errors.push("تخصص التمريض مطلوب");
+      if (!data.description) errors.push("الوصف مطلوب");
+      if (!data.price) errors.push("السعر مطلوب");
+      if (!data.location) errors.push("الموقع مطلوب");
+      if (!data.phone) errors.push("رقم الهاتف مطلوب");
+      if (!data.certificate?.fileUrl || !data.certificate?.fileType) {
+        errors.push("شهادة الترخيص مطلوبة");
+      }
     }
-  }
 
-  if (role === "patient") {
-    if (!data.phone) errors.push("رقم الهاتف مطلوب");
-    if (!data.location) errors.push("الموقع مطلوب");
-  }
+    if (role === "patient") {
+      if (!data.phone) errors.push("رقم الهاتف مطلوب");
+      if (!data.location) errors.push("الموقع مطلوب");
+    }
 
-  return errors;
-};
+    return errors;
+  };
 
   try {
     const {
@@ -73,9 +73,9 @@ const registerUser = async (req, res) => {
 
     const certificate = file
       ? {
-          fileUrl: file.path,
-          fileType: file.mimetype,
-        }
+        fileUrl: file.path,
+        fileType: file.mimetype,
+      }
       : null;
 
     const extraErrors = validateRoleData(role, {
@@ -133,43 +133,45 @@ const registerUser = async (req, res) => {
         status: "pending",
       });
     }
-        if (role === "patient") {
-      await Patient.create({
-        userId: user._id,
-        phone,
-        location,
-      });
-      await History.create({
-       patientId: patient._id,
-       chronicDiseases: req.body.chronicDiseases || [],
-       surgeries: req.body.surgeries || [],
-       medications: req.body.medications || [],
-       allergy: req.body.allergy || "",
-       visits: req.body.visits || [],
-       testFileUrl: req.body.testFileUrl || ""
-      });
-    }
+if (role === "patient") {
+  const patient = await Patient.create({
+    userId: user._id,
+    phone,
+    location,
+  });
+
+  await History.create({
+    patientId: patient._id,
+    chronicDiseases: req.body.chronicDiseases || [],
+    surgeries: req.body.surgeries || [],
+    medications: req.body.medications || [],
+    allergy: req.body.allergy || "",
+    visits: req.body.visits || [],
+    testFileUrl: req.body.testFileUrl || ""
+  });
+}
+
     // وهكذا لباقي الـ roles
 
     const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-const otp = otpGenerator.generate(6, {
-  upperCaseAlphabets: false,
-  specialChars: false
-});
+    const otp = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
 
-await OTP.findOneAndUpdate(
-  { email },
-  { otp, expiresAt: Date.now() + 5 * 60 * 1000 },
-  { upsert: true }
-);
+    await OTP.findOneAndUpdate(
+      { email },
+      { otp, expiresAt: Date.now() + 5 * 60 * 1000 },
+      { upsert: true }
+    );
 
-await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
-return res.status(201).json({
-  message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
-});
+    await sendEmail(email, 'رمز تأكيد الحساب', `رمز OTP الخاص بك هو: ${otp}`);
+    return res.status(201).json({
+      message: "تم التسجيل بنجاح، برجاء تأكيد الإيميل باستخدام رمز OTP المرسل",
+    });
 
   } catch (err) {
     console.error(" Error in register:", err);
@@ -402,7 +404,7 @@ const resendOtp = async (req, res) => {
     res.status(500).json({ message: "حدث خطأ ما", error: err.message });
   }
 };
- const logoutUser = (req, res) => {
+const logoutUser = (req, res) => {
   // ببساطة مجرد إرسال رسالة نجاح
   return res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 };
@@ -441,7 +443,7 @@ const updateUser = async (req, res) => {
       new: true,
       runValidators: true
     }).select("-password");
-    
+
     if (req.body.user?.email || req.body.user?.password) {
       return res.status(400).json({ message: "You can't update email or password from here." });
     }
@@ -484,4 +486,4 @@ const updateUser = async (req, res) => {
 
 //  Exports
 
-module.exports = {registerUser,loginUser,forgotPassword,verifyOtp,resetPassword,resendOtp,logoutUser,getUser,updateUser};
+module.exports = { registerUser, loginUser, forgotPassword, verifyOtp, resetPassword, resendOtp, logoutUser, getUser, updateUser };
