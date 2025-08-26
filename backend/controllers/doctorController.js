@@ -87,19 +87,19 @@ const getAllDoctors = async (req, res) => {
 
 
 // ✅ Get doctor by ID
+// ✅ Get doctor by ID
 const getDoctorById = async (req, res) => {
   try {
-    const doctor = await User.findById(req.params.id).select("-password");
-    if (!doctor || doctor.role !== "doctor") {
+    const doctor = await Doctor.findOne({ userId: req.params.id })
+      .populate("userId", "fullName gender email image location role isVerified");
+
+    if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
     }
 
-    const profile = await DoctorProfile.findOne({ userId: doctor._id });
-    res.status(200).json({ user: doctor, profile });
+    res.status(200).json(doctor);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error getting doctor", error: error.message });
+    res.status(500).json({ message: "Error getting doctor", error: error.message });
   }
 };
 

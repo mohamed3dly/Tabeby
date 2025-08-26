@@ -8,7 +8,7 @@ const run = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI); // هنا هيتسحب من .env
 
-    const email = "hebaaliahmed419@gmail.com"; // ✏️ غيره حسب المستخدم
+    const email = "mohamed53366053@gmail.com"; // ✏️ غيره حسب المستخدم
     const newPassword = "Test1234";
 
     const hashed = await bcrypt.hash(newPassword, 10);

@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const session = require('express-session');
+const passport = require('passport');
 
 
 connectDB();
@@ -12,12 +13,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
+app.use(cors({ origin: 'http://localhost:4200', credentials: true }));
 app.use(session({
-  secret: process.env.JWT_SECRET,
+  secret:process.env.JWT_SECRET,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false
 }));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use('/api/auth', require('./routes/auth')); 
+
+// app.use(session({
+//   secret: process.env.JWT_SECRET,
+//   resave: false,
+//   saveUninitialized: true,
+// }));
 
 
 app.get('/', (req, res) => {

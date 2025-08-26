@@ -1,4 +1,5 @@
 const express = require("express");
+// const upload = require("../middlewares/multer");
 const router = express.Router();
 
 const {
@@ -11,10 +12,11 @@ const {
   logoutUser,
   getUser,
   updateUser,
-  verifyOtpReset
+  verifyOtpReset,
+  updateUserImage
 } = require("../controllers/userController");
 
-const upload = require("../middlewares/multer");
+const multiUpload = require("../middlewares/multer");
 const authMiddleware = require("../middlewares/authMiddleware");
 
 
@@ -28,8 +30,13 @@ router.get("/all", async (req, res) => {
   }
 });
 
+router.put(
+  "/:userId/update-image",
+  multiUpload, // هنستقبل صورة واحدة فقط
+  updateUserImage
+);
 
-router.post("/register", upload.single("certificate"), registerUser);
+router.post("/register", multiUpload, registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOtp);

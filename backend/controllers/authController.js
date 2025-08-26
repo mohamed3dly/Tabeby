@@ -27,10 +27,8 @@ const getGoogleAuthUrl = (req, res) => {
   res.send({ url });
 };
 
-
 const googleOAuthCallback = async (req, res) => {
   const { code } = req.query;
-  console.log("🔑 Received code:", code);
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -40,30 +38,63 @@ const googleOAuthCallback = async (req, res) => {
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
-    console.log("📥 Tokens:", tokens);
-
     oauth2Client.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
-    const { data: profile } = await oauth2.userinfo.get();
-    console.log("👤 User info:", profile);
+    // استخرج الـ userId من التوكن بتاعنا (اللي جاي من الفرونت)
+    const decoded = jwt.verify(req.cookies.jwt || req.query.token, process.env.JWT_SECRET);
 
-    const user = await User.findOneAndUpdate(
-      { email: profile.email },
+    const user = await User.findByIdAndUpdate(
+      decoded.userId,
       {
         "google.accessToken": tokens.access_token,
         "google.refreshToken": tokens.refresh_token,
-        "google.email": profile.email,
       },
       { new: true }
     );
 
-    res.json({ message: "✅ User connected to Google", user });
+    res.json({ message: "✅ Google Calendar connected successfully", user });
   } catch (err) {
     console.error("❌ Google OAuth error:", err.response?.data || err.message, err);
     res.status(500).json({ message: "Failed to connect to Google" });
   }
 };
+
+// const googleOAuthCallback = async (req, res) => {
+//   const { code } = req.query;
+//   console.log("🔑 Received code:", code);
+
+//   const oauth2Client = new google.auth.OAuth2(
+//     process.env.GOOGLE_CLIENT_ID,
+//     process.env.GOOGLE_CLIENT_SECRET,
+//     process.env.GOOGLE_REDIRECT_URI
+//   );
+
+//   try {
+//     const { tokens } = await oauth2Client.getToken(code);
+//     console.log("📥 Tokens:", tokens);
+
+//     oauth2Client.setCredentials(tokens);
+
+//     const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+//     const { data: profile } = await oauth2.userinfo.get();
+//     console.log("👤 User info:", profile);
+
+//     const user = await User.findOneAndUpdate(
+//       { email: profile.email },
+//       {
+//         "google.accessToken": tokens.access_token,
+//         "google.refreshToken": tokens.refresh_token,
+//         "google.email": profile.email,
+//       },
+//       { new: true }
+//     );
+
+//     res.json({ message: "✅ User connected to Google", user });
+//   } catch (err) {
+//     console.error("❌ Google OAuth error:", err.response?.data || err.message, err);
+//     res.status(500).json({ message: "Failed to connect to Google" });
+//   }
+// };
 
 
 // ==============================
