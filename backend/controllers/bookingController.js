@@ -1,60 +1,10 @@
 const Booking = require("../models/booking");
 const User = require("../models/user");
 const Doctor = require("../models/doctor");
+const Patient = require("../models/patient"); // 👈
 const nodemailer = require("nodemailer");
 const { google } = require("googleapis");
-const { isUserAvailable } = require("../utils/googleAvailability");
-const { deleteGoogleCalendarEvent ,createGoogleCalendarEvent} = require("../utils/googleEvent");
-
-
-// const createGoogleCalendarEvent = async (host, guestEmail, booking) => {
-//   try {
-//     const oAuth2Client = new google.auth.OAuth2(
-//       process.env.GOOGLE_CLIENT_ID,
-//       process.env.GOOGLE_CLIENT_SECRET,
-//       process.env.GOOGLE_REDIRECT_URI // استخدمتيه أثناء الربط
-//     );
-
-//     oAuth2Client.setCredentials({
-//       access_token: host.google.accessToken,
-//       refresh_token: host.google.refreshToken,
-//     });
-
-//     const calendar = google.calendar({ version: "v3", auth: oAuth2Client });
-
-//     const start = new Date(booking.date);
-//     const end = new Date(start.getTime() + 30 * 60 * 1000); // 30 دقيقة
-
-//     const event = {
-//       summary: `موعد بين ${booking.hostName} و ${booking.guestName}`,
-//       description: `نوع الحجز: ${booking.type}`,
-//       start: {
-//         dateTime: start.toISOString(),
-//         timeZone: "Africa/Cairo",
-//       },
-//       end: {
-//         dateTime: end.toISOString(),
-//         timeZone: "Africa/Cairo",
-//       },
-//       attendees: guestEmail ? [{ email: guestEmail }] : [],
-//     };
-
-//     const calendarId = host.google.calendarId || "primary";
-
-//     const response = await calendar.events.insert({
-//       calendarId,
-//       resource: event,
-//       sendUpdates: "all", // لإشعار المدعوين
-//     });
-
-//     console.log("✅ تم إنشاء الحدث في Google Calendar");
-//     return response.data.id;
-//   } catch (error) {
-//     console.error("❌ فشل إنشاء الحدث على Google Calendar:", error.message);
-//     return null;
-//   }
-// };
-
+const { isUserAvailable, createCalendarEvent } = require("../utils/googleCalendar");
 
 // إعداد الإيميل
 const transporter = nodemailer.createTransport({
@@ -80,98 +30,171 @@ const sendEmail = async (to, subject, html) => {
 
 // إنشاء حجز
 
+// 📌 controller/bookingController.js
+// ✅ إنشاء حجز
+// exports.createBooking = async (req, res) => {
+//   console.log("📥 [NODE] Incoming Booking Body:", JSON.stringify(req.body, null, 2));
+
+//   try {
+//     const { doctorId, patientId, startTime, endTime, description, type } = req.body;
+
+//     if (!doctorId || !patientId || !startTime || !endTime || !type) {
+//       console.error("❌ [NODE] Missing Fields:", { doctorId, patientId, startTime, endTime, type });
+//       return res.status(400).json({ message: "Missing required fields" });
+//     }
+
+
+//     // 1️⃣ هات الدكتور وربطه باليوزر
+//     const doctor = await Doctor.findById(doctorId).populate("userId");
+//     if (!doctor || !doctor.userId?.google?.accessToken) {
+//       return res.status(400).json({ message: "Doctor not connected to Google" });
+//     }
+//    const patient = await Patient.findById(patientId);
+
+//     // 2️⃣ شوف هل الدكتور متاح ولا مشغول
+//     const available = await isUserAvailable(
+//   doctor.userId._id,          // userId الأول
+//   doctor.userId.google,       // googleData التاني
+//   new Date(startTime),
+//   new Date(endTime)
+// );
+
+//     if (!available) {
+//       return res.status(400).json({ message: "Doctor not available at this time" });
+//     }
+
+//     // 3️⃣ أنشئ الـ event على Google Calendar
+//     const eventId = await createCalendarEvent(doctor.userId._id, {
+//       with: "Patient",
+//       description,
+//       startTime,
+//       endTime,
+//        guestEmail: patient?.email, // لو عايزة تبعتي ايميل للمريض ممكن تحطيه هنا
+//     });
+
+//     // 4️⃣ خزّن الحجز في DB
+//     const booking = await Booking.create({
+//       doctorId,
+//       patientId,
+//       startTime,
+//       endTime,
+//       description,
+//       type: "clinic",
+//       googleEventId: eventId, // نخزن الـ eventId عشان نقدر نلغيه/نعدله بعدين
+//     });
+    
+//      // ✅ إرسال إيميل للمريض
+//     if (patient?.email) {
+//   console.log("📨 Sending email to:", patient.email);
+
+//   await sendEmail(
+//     patient.email,
+//     "تأكيد الحجز",
+//     `
+//       <h3>مرحباً ${patient.fullName}</h3>
+//       <p>تم تأكيد حجزك مع الدكتور <strong>${doctor.fullName}</strong></p>
+//       <p>🗓️ التاريخ: ${new Date(startTime).toLocaleDateString("ar-EG")}</p>
+//       <p>⏰ الوقت: ${new Date(startTime).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}</p>
+//     `
+//   );
+
+//   console.log("✅ Email function executed");
+// }
+
+
+//     res.status(201).json({
+//       message: "Booking created successfully",
+//       booking,
+//     });
+//   } catch (error) {
+//     console.error("❌ Error creating booking:", error);
+//     res.status(500).json({ message: "Error creating booking", error: error.message });
+//   }
+
+// };
 exports.createBooking = async (req, res) => {
+  console.log("📥 [NODE] Incoming Booking Body:", JSON.stringify(req.body, null, 2));
+
   try {
-    const { userId, doctorId, nurseId, date, type } = req.body;
+    const { doctorId, patientId, startTime, endTime, description, type } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
-
-    let host;
-    if (doctorId) {
-      host = await Doctor.findById(doctorId);
-      if (!host) return res.status(404).json({ message: "الدكتور غير موجود" });
-    } else if (nurseId) {
-      host = await Nurse.findById(nurseId);
-      if (!host) return res.status(404).json({ message: "الممرض غير موجود" });
-    } else {
-      return res.status(400).json({ message: "يجب تحديد دكتور أو ممرض" });
-    }
-    // 🔐 التحقق من ربط Google Calendar
-if (!host.google?.accessToken || !host.google?.refreshToken) {
-  return res.status(400).json({
-    message: `لا يمكن الحجز إلا بعد ربط التقويم الخاص بـ ${
-      doctorId ? "الدكتور" : "الممرض"
-    } بـ Google Calendar`,
-  });
-}
-
-    const validTypes = ["online", "in-person"];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({ message: "نوع الحجز غير صالح" });
+    if (!doctorId || !patientId || !startTime || !endTime || !type) {
+      console.error("❌ [NODE] Missing Fields:", { doctorId, patientId, startTime, endTime, type });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // التأكد من وجود حجز في نفس الوقت مع نفس الدكتور أو الممرض
-    const existingBooking = await Booking.findOne({
-      $or: [{ doctorId }, { nurseId }],
-      date: new Date(date),
+    // 1️⃣ هات الدكتور وربطه باليوزر
+    const doctor = await Doctor.findById(doctorId).populate("userId");
+    if (!doctor || !doctor.userId?.google?.accessToken) {
+      return res.status(400).json({ message: "Doctor not connected to Google" });
+    }
+
+    // 2️⃣ هات بيانات المريض كـ User
+    const patient = await User.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // 3️⃣ شوف هل الدكتور متاح ولا مشغول
+    const available = await isUserAvailable(
+      doctor.userId._id,          // userId الأول
+      doctor.userId.google,       // googleData التاني
+      new Date(startTime),
+      new Date(endTime)
+    );
+
+    if (!available) {
+      return res.status(400).json({ message: "Doctor not available at this time" });
+    }
+
+    // 4️⃣ أنشئ الـ event على Google Calendar
+    const eventId = await createCalendarEvent(doctor.userId._id, {
+      with: patient.fullName || "Patient",
+      description,
+      startTime,
+      endTime,
+      guestEmail: patient?.email, // لو عايزة تبعتي ايميل للمريض
     });
-    if (existingBooking) {
-      return res.status(400).json({ message: "هذا الموعد محجوز مسبقاً" });
-    }
 
-    // ✅ التأكد من تفرّغ الطبيب/الممرض من تقويم جوجل
-    if (host?.google?.accessToken && host?.google?.refreshToken) {
-      const startTime = new Date(date);
-      const endTime = new Date(startTime.getTime() + 30 * 60 * 1000); // 30 دقيقة
-      const isAvailable = await isUserAvailable(host.google, startTime, endTime);
-      if (!isAvailable) {
-        return res.status(400).json({ message: "المضيف مشغول في هذا الوقت على تقويم جوجل" });
-      }
-    }
-
-    // إنشاء الحجز
+    // 5️⃣ خزّن الحجز في DB
     const booking = await Booking.create({
-      userId,
       doctorId,
-      nurseId,
-      date,
-      type,
+      patientId,
+      startTime,
+      endTime,
+      description,
+      type: "clinic",
+      googleEventId: eventId,
     });
 
-    // إرسال إيميل للمريض
-    if (user.email) {
+    // ✅ إرسال إيميل للمريض
+    if (patient?.email) {
+      console.log("📨 Sending email to:", patient.email);
+
       await sendEmail(
-        user.email,
+        patient.email,
         "تأكيد الحجز",
-        `<h2>مرحبًا ${user.name}</h2><p>تم حجز موعد مع ${host.name} بتاريخ ${new Date(date).toLocaleString("ar-EG")}</p>`
+        `
+          <h3>مرحباً ${patient.fullName}</h3>
+          <p>تم تأكيد حجزك مع الدكتور <strong>${doctor.fullName}</strong></p>
+          <p>🗓️ التاريخ: ${new Date(startTime).toLocaleDateString("ar-EG")}</p>
+          <p>⏰ الوقت: ${new Date(startTime).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}</p>
+        `
       );
+
+      console.log("✅ Email function executed");
     }
 
-    // إضافة الحجز إلى Google Calendar
-    if (
-      host?.google?.accessToken &&
-      host?.google?.refreshToken &&
-      user?.google?.email
-    ) {
-      const eventId = await createGoogleCalendarEvent(host, user.google.email, {
-        date,
-        type,
-        hostName: host.name,
-        guestName: user.name,
-      });
-
-      if (eventId) {
-        booking.googleEventId = eventId;
-        await booking.save();
-      }
-    }
-
-    res.status(201).json({ message: "✅ تم إنشاء الحجز بنجاح", booking });
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking,
+    });
   } catch (error) {
-    console.error("❌", error);
-    res.status(500).json({ message: error.message });
-  }}
+    console.error("❌ Error creating booking:", error);
+    res.status(500).json({ message: "Error creating booking", error: error.message });
+  }
+};
+
 // عرض حجز واحد
 exports.getBookingById = async (req, res) => {
     try {

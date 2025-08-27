@@ -88,10 +88,11 @@ const getAllDoctors = async (req, res) => {
 
 // ✅ Get doctor by ID
 // ✅ Get doctor by ID
+// ✅ Get doctor by ID (من Doctor collection)
 const getDoctorById = async (req, res) => {
   try {
-    const doctor = await Doctor.findOne({ userId: req.params.id })
-      .populate("userId", "fullName gender email image location role isVerified");
+    const doctor = await Doctor.findById(req.params.id)
+      .populate("userId", "-password"); // هيرجع بيانات اليوزر مع الدكتور
 
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
@@ -102,6 +103,7 @@ const getDoctorById = async (req, res) => {
     res.status(500).json({ message: "Error getting doctor", error: error.message });
   }
 };
+
 
 
 // POST /doctors/certificate

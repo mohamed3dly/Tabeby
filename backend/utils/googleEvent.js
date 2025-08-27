@@ -37,8 +37,8 @@ const createGoogleCalendarEvent = async (host, guestEmail, booking) => {
     );
 
     oAuth2Client.setCredentials({
-      access_token: host.google.accessToken,
-      refresh_token: host.google.refreshToken,
+      access_token: user.google.accessToken,
+      refresh_token: user.google.refreshToken,
     });
 
     const calendar = google.calendar({ version: "v3", auth: oAuth2Client });

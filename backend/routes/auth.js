@@ -48,40 +48,53 @@ router.get('/google/signup/callback',
 // );
 router.get('/google/connect',
   (req, res, next) => {
-    console.log("Redirecting to Google with callback:", 
-      "http://localhost:3000/api/auth/google/connect/callback");
+    console.log("➡️ Redirecting to Google...");
     next();
   },
-  passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar'] })
+  passport.authenticate('google', {
+    scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar'],
+    accessType: 'offline',   // 👈 مهم عشان refresh_token
+    prompt: 'consent',       // 👈 يجبر Google يرجعه حتى لو وافق قبل كده
+  })
 );
 
+// 2️⃣ الكولباك بعد ما Google يرجّع التوكنات
 router.get('/google/connect/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:4200/about-us?google=failed' }),
+  passport.authenticate('google', {
+    failureRedirect: 'http://localhost:4200/about-us?google=failed'
+  }),
   async (req, res) => {
     try {
       const user = await User.findById(req.user._id);
-      if (!user) return res.redirect('http://localhost:4200/about-us?google=nouser');
+      if (!user) {
+        return res.redirect('http://localhost:4200/about-us?google=nouser');
+      }
 
+      // ✅ خزن التوكنات في DB
       user.googleId = req.user.googleId;
-      user.google = {
-        accessToken: req.user.google.accessToken,
-        refreshToken: req.user.google.refreshToken,
-      };
+
+      if (!user.google) user.google = {};
+
+      user.google.accessToken = req.user.google.accessToken;
+
+      // 👇 مهم جداً: خزّن refreshToken لو Google رجّعه
+      if (req.user.google.refreshToken) {
+        user.google.refreshToken = req.user.google.refreshToken;
+      }
 
       await user.save();
 
+      console.log("✅ Google account connected with refresh token:", user.google.refreshToken ? "YES" : "NO");
+
       res.redirect('http://localhost:4200/about-us?google=connected');
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error saving Google tokens:", err);
       res.redirect('http://localhost:4200/about-us?google=error');
     }
   }
 );
 
-
-
 /* ------------------------- DISCONNECT ------------------------- */
-// API لإلغاء الربط
 router.post('/disconnect', async (req, res) => {
   if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -94,5 +107,6 @@ router.post('/disconnect', async (req, res) => {
     res.status(500).json({ message: 'Error disconnecting Google', error: err });
   }
 });
+
 
 module.exports = router;
